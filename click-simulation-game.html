@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_self">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Click Simulation - Idle Clicker Game</title>
+    <meta name="description" content="A fun idle clicker game where you tap to earn clicks, coins, and become powerful through rebirths and pets">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: #f1f5f9;
+        }
+        
+        .game-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .click-animation {
+            animation: clickPulse 0.2s ease-out;
+        }
+        
+        @keyframes clickPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        
+        .coin-animation {
+            animation: coinFloat 1s ease-out forwards;
+        }
+        
+        @keyframes coinFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100px) scale(0.5); opacity: 0; }
+        }
+        
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        
+        .pet-card {
+            transition: all 0.3s ease;
+        }
+        
+        .pet-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .upgrade-card {
+            transition: all 0.2s ease;
+        }
+        
+        .upgrade-card:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .notification {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .egg-hatch {
+            animation: eggHatch 0.5s ease-out;
+        }
+        
+        @keyframes eggHatch {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Game Header -->
+    <header class="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-2 md:mb-0">
+                    <h1 class="text-2xl md:text-3xl font-bold game-font text-cyan-400">
+                        <i class="fas fa-mouse-pointer mr-2"></i>Click Simulation
+                    </h1>
+                    <p class="text-gray-400 text-sm">Idle Clicker Game</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-4 md:gap-6">
+                    <div class="text-center">
+                        <div class="text-xs text-gray-400">Rebirths</div>
+                        <div class="text-lg font-bold text-yellow-400 game-font" id="rebirthCount">0</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-400">Multiplier</div>
+                        <div class="text-lg font-bold text-green-400 game-font" id="multiplierDisplay">1.0x</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Click Area & Stats -->
+            <div class="lg:col-span-2">
+                <!-- Stats Bar -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-400">Clicks</div>
+                                <div class="text-2xl font-bold game-font text-blue-400" id="clicksDisplay">0</div>
+                            </div>
+                            <i class="fas fa-mouse-pointer text-blue-400 text-xl"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-400">Coins</div>
+                                <div class="text-2xl font-bold game-font text-yellow-400" id="coinsDisplay">0</div>
+                            </div>
+                            <i class="fas fa-coins text-yellow-400 text-xl"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-400">Gems</div>
+                                <div class="text-2xl font-bold game-font text-purple-400" id="gemsDisplay">0</div>
+                            </div>
+                            <i class="fas fa-gem text-purple-400 text-xl"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-400">Pet Multiplier</div>
+                                <div class="text-2xl font-bold game-font text-pink-400" id="petMultiplierDisplay">1.0x</div>
+                            </div>
+                            <i class="fas fa-paw text-pink-400 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Click Area -->
+                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 mb-6 border border-gray-700 shadow-2xl">
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold mb-2 text-cyan-300">Click to Earn!</h2>
+                        <p class="text-gray-400 mb-6">Each click earns <span class="text-green-400 font-bold" id="clicksPerTap">1</span> clicks</p>
+                        
+                        <!-- Progress to next coin -->
+                        <div class="mb-6">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">Progress to next coin</span>
+                                <span class="text-yellow-400" id="coinProgressText">0/10</span>
+                            </div>
+                            <div class="h-3 bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-yellow-500 to-yellow-300 progress-bar" id="coinProgressBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Main Click Button -->
+                        <button 
+                            id="clickButton" 
+                            class="w-64 h-64 md:w-80 md:h-80 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 active:from-blue-800 active:to-cyan-700 transition-all duration-150 shadow-2xl border-4 border-cyan-300/30 mb-4 relative overflow-hidden group"
+                        >
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="fas fa-mouse-pointer text-white text-6xl md:text-7xl mb-4 group-active:scale-90 transition-transform"></i>
+                                    <div class="text-3xl md:text-4xl font-bold game-font text-white">CLICK!</div>
+                                    <div class="text-lg text-cyan-100 mt-2">Tap to earn clicks</div>
+                                </div>
+                            </div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </button>
+                        
+                        <p class="text-gray-400 text-sm mt-4">Every 10 clicks = 1 coin</p>
+                    </div>
+                </div>
+                
+                <!-- Rebirth Section -->
+                <div class="bg-gray-900/70 rounded-xl p-6 border border-gray-700 mb-6">
+                    <h2 class="text-xl font-bold mb-4 text-yellow-300 flex items-center">
+                        <i class="fas fa-redo mr-2"></i> Rebirth System
+                    </h2>
+                    <p class="text-gray-400 mb-4">Reset your progress for permanent boosts! Each rebirth gives +10% more clicks per tap.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button 
+                            id="rebirthButton" 
+                            class="bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 upgrade-card flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled
+                        >
+                            <div class="text-center">
+                                <div class="text-lg font-bold">Rebirth</div>
+                                <div class="text-sm">Cost: <span id="rebirthCost">100</span> coins</div>
+                                <div class="text-xs mt-1">+10% clicks per tap</div>
+                            </div>
+                        </button>
+                        
+                        <div class="bg-gray-800/50 rounded-xl p-4">
+                            <h3 class="font-bold mb-2 text-cyan-300">Rebirth Stats</h3>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Total rebirths:</span>
+                                    <span class="font-bold text-yellow-400" id="totalRebirths">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Current multiplier:</span>
+                                    <span class="font-bold text-green-400" id="currentMultiplier">1.0x</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Next multiplier:</span>
+                                    <span class="font-bold text-green-300" id="nextMultiplier">1.1x</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Upgrades & Shop -->
+            <div class="space-y-6">
+                <!-- Gem Upgrades -->
+                <div class="bg-gray-900/70 rounded-xl p-6 border border-gray-700">
+                    <h2 class="text-xl font-bold mb-4 text-purple-300 flex items-center">
+                        <i class="fas fa-gem mr-2"></i> Gem Upgrades
+                    </h2>
+                    <p class="text-gray-400 mb-4 text-sm">Use gems to buy powerful multi-rebirth upgrades!</p>
+                    
+                    <div class="space-y-3">
+                        <button 
+                            id="rebirth10Button" 
+                            class="w-full bg-gradient-to-r from-purple-800 to-purple-700 hover:from-purple-700 hover:to-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 upgrade-card flex justify-between items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled
+                        >
+                            <div class="text-left">
+                                <div class="font-bold">Rebirth x10</div>
+                                <div class="text-xs text-gray-300">Perform 10 rebirths at once</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm">Cost: <span class="text-yellow-300">10</span> gems</div>
+                            </div>
+                        </button>
+                        
+                        <button 
+                            id="rebirth100Button" 
+                            class="w-full bg-gradient-to-r from-purple-800 to-purple-700 hover:from-purple-700 hover:to-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 upgrade-card flex justify-between items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled
+                        >
+                            <div class="text-left">
+                                <div class="font-bold">Rebirth x100</div>
+                                <div class="text-xs text-gray-300">Perform 100 rebirths at once</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm">Cost: <span class="text-yellow-300">100</span> gems</div>
+                            </div>
+                        </button>
+                        
+                        <button 
+                            id="rebirth500Button" 
+                            class="w-full bg-gradient-to-r from-purple-800 to-purple-700 hover:from-purple-700 hover:to-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 upgrade-card flex justify-between items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled
+                        >
+                            <div class="text-left">
+                                <div class="font-bold">Rebirth x500</div>
+                                <div class="text-xs text-gray-300">Perform 500 rebirths at once</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm">Cost: <span class="text-yellow-300">500</span> gems</div>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-700">
+                        <div class="text-sm text-gray-400">Gems are earned through milestones and achievements</div>
+                    </div>
+                </div>
+                
+                <!-- Egg Shop -->
+                <div class="bg-gray-900/70 rounded-xl p-6 border border-gray-700">
+                    <h2 class="text-xl font-bold mb-4 text-pink-300 flex items-center">
+                        <i class="fas fa-egg mr-2"></i> Egg Shop
+                    </h2>
+                    <p class="text-gray-400 mb-4 text-sm">Buy eggs that hatch into powerful pets! Pets multiply your clicks per tap.</p>
+                    
+                    <div class="space-y-4" id="eggShopContainer">
+                        <!-- Eggs will be dynamically added here -->
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-700">
+                        <h3 class="font-bold mb-2 text-cyan-300">Your Pets</h3>
+                        <div class="flex flex-wrap gap-2" id="petsContainer">
+                            <!-- Pets will be dynamically added here -->
+                            <div class="text-gray-500 text-sm">No pets yet. Buy eggs to hatch pets!</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Milestones & Achievements -->
+                <div class="bg-gray-900/70 rounded-xl p-6 border border-gray-700">
+                    <h2 class="text-xl font-bold mb-4 text-green-300 flex items-center">
+                        <i class="fas fa-trophy mr-2"></i> Milestones
+                    </h2>
+                    <div class="space-y-3" id="milestonesContainer">
+                        <!-- Milestones will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notifications Area -->
+        <div class="fixed bottom-4 right-4 space-y-2 z-20" id="notificationsContainer">
+            <!-- Notifications will appear here -->
+        </div>
+    </main>
+
+    <!-- Game Footer -->
+    <footer class="bg-gray-900/80 border-t border-gray-700 mt-8">
+        <div class="container mx-auto px-4 py-6">
+            <div class="text-center text-gray-400">
+                <p class="mb-2">Click Simulation - An idle clicker game with endless progression</p>
+                <p class="text-sm">Phase 6: Become OP with rebirths, gems, and pets!</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Game State
+        const gameState = {
+            clicks: 0,
+            coins: 0,
+            gems: 0,
+            rebirthCount: 0,
+            rebirthMultiplier: 1.0,
+            petMultiplier: 1.0,
+            totalClicks: 0,
+            totalCoins: 0,
+            pets: [],
+            milestones: [],
+            rebirthCost: 100,
+            clicksPerTap: 1,
+            coinProgress: 0,
+            lastSave: Date.now()
+        };
+
+        // Game Data
+        const eggs = [
+            { 
+                "id": 1, 
+                "name": "Common Egg", 
+                "cost": 50, 
+                "description": "Hatches a common pet with 1.2x multiplier",
+                "multiplier": 1.2,
+                "color": "gray",
+                "icon": "fas fa-egg"
+            },
+            { 
+                "id": 2, 
+                "name": "Rare Egg", 
+                "cost": 200, 
+                "description": "Hatches a rare pet with 1.5x multiplier",
+                "multiplier": 1.5,
+                "color": "blue",
+                "icon": "fas fa-egg"
+            },
+            { 
+                "id": 3, 
+                "name": "Epic Egg", 
+                "cost": 1000, 
+                "description": "Hatches an epic pet with 2.0x multiplier",
+                "multiplier": 2.0,
+                "color": "purple",
+                "icon": "fas fa-egg"
+            },
+            { 
+                "id": 4, 
+                "name": "Legendary Egg", 
+                "cost": 5000, 
+                "description": "Hatches a legendary pet with 3.0x multiplier",
+                "multiplier": 3.0,
+                "color": "yellow",
+                "icon": "fas fa-egg"
+            }
+        ];
+
+        const milestones = [
+            { "id": 1, "type": "clicks", "threshold": 100, "reward": 1, "completed": false, "name": "100 Clicks" },
+            { "id": 2, "type": "clicks", "threshold": 1000, "reward": 5, "completed": false, "name": "1,000 Clicks" },
+            { "id": 3, "type": "clicks", "threshold": 10000, "reward": 20, "completed": false, "name": "10,000 Clicks" },
+            { "id": 4, "type": "coins", "threshold": 100, "reward": 2, "completed": false, "name": "100 Coins" },
+            { "id": 5, "type": "coins", "threshold": 1000, "reward": 10, "completed": false, "name": "1,000 Coins" },
+            { "id": 6, "type": "rebirths", "threshold": 1, "reward": 5, "completed": false, "name": "First Rebirth" },
+            { "id": 7, "type": "rebirths", "threshold": 10, "reward": 25, "completed": false, "name": "10 Rebirths" },
+            { "id": 8, "type": "rebirths", "threshold": 50, "reward": 100, "completed": false, "name": "50 Rebirths" }
+        ];
+
+        // DOM Elements
+        const clickButton = document.getElementById("clickButton");
+        const rebirthButton = document.getElementById("rebirthButton");
+        const rebirth10Button = document.getElementById("rebirth10Button");
+        const rebirth100Button = document.getElementById("rebirth100Button");
+        const rebirth500Button = document.getElementById("rebirth500Button");
+        
+        // Display Elements
+        const clicksDisplay = document.getElementById("clicksDisplay");
+        const coinsDisplay = document.getElementById("coinsDisplay");
+        const gemsDisplay = document.getElementById("gemsDisplay");
+        const rebirthCountDisplay = document.getElementById("rebirthCount");
+        const multiplierDisplay = document.getElementById("multiplierDisplay");
+        const petMultiplierDisplay = document.getElementById("petMultiplierDisplay");
+        const clicksPerTapDisplay = document.getElementById("clicksPerTap");
+        const coinProgressBar = document.getElementById("coinProgressBar");
+        const coinProgressText = document.getElementById("coinProgressText");
+        const rebirthCostDisplay = document.getElementById("rebirthCost");
+        const totalRebirthsDisplay = document.getElementById("totalRebirths");
+        const currentMultiplierDisplay = document.getElementById("currentMultiplier");
+        const nextMultiplierDisplay = document.getElementById("nextMultiplier");
+        const eggShopContainer = document.getElementById("eggShopContainer");
+        const petsContainer = document.getElementById("petsContainer");
+        const milestonesContainer = document.getElementById("milestonesContainer");
+        const notificationsContainer = document.getElementById("notificationsContainer");
+
+        // Initialize Game
+        function initGame() {
+            loadGame();
+            renderEggShop();
+            renderMilestones();
+            updateDisplays();
+            setupEventListeners();
+            
+            // Auto-save every 30 seconds
+            setInterval(saveGame, 30000);
+            
+            // Check for milestone achievements every second
+            setInterval(checkMilestones, 1000);
+            
+            console.log("Click Simulation game initialized!");
+            showNotification("Welcome to Click Simulation! Start clicking to earn coins!", "info");
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Main click button
+            clickButton.addEventListener("click", handleClick);
+            
+            // Rebirth button
+            rebirthButton.addEventListener("click", performRebirth);
+            
+            // Multi-rebirth buttons
+            rebirth10Button.addEventListener("click", () => performMultiRebirth(10));
+            rebirth100Button.addEventListener("click", () => performMultiRebirth(100));
+            rebirth500Button.addEventListener("click", () => performMultiRebirth(500));
+            
+            // Keyboard support (Spacebar for clicking)
+            document.addEventListener("keydown", (e) => {
+                if (e.code === "Space" && !e.target.matches("input, textarea")) {
+                    e.preventDefault();
+                    handleClick();
+                }
+            });
+        }
+
+        // Handle Click
+        function handleClick() {
+            // Calculate clicks earned
+            const baseClicks = gameState.clicksPerTap;
+            const multiplier = gameState.rebirthMultiplier * gameState.petMultiplier;
+            const clicksEarned = baseClicks * multiplier;
+            
+            // Update game state
+            gameState.clicks += clicksEarned;
+            gameState.totalClicks += clicksEarned;
+            gameState.coinProgress += clicksEarned;
+            
+            // Check for coin conversion
+            if (gameState.coinProgress >= 10) {
+                const coinsEarned = Math.floor(gameState.coinProgress / 10);
+                gameState.coins += coinsEarned;
+                gameState.totalCoins += coinsEarned;
+                gameState.coinProgress = gameState.coinProgress % 10;
+                
+                // Show coin animation
+                showCoinAnimation(coinsEarned);
+            }
+            
+            // Update displays
+            updateDisplays();
+            
+            // Add click animation
+            clickButton.classList.add("click-animation");
+            setTimeout(() => {
+                clickButton.classList.remove("click-animation");
+            }, 200);
+            
+            // Check button states
+            updateButtonStates();
+        }
+
+        // Perform Rebirth
+        function performRebirth() {
+            if (gameState.coins < gameState.rebirthCost) return;
+            
+            // Deduct cost
+            gameState.coins -= gameState.rebirthCost;
+            
+            // Increase rebirth count and multiplier
+            gameState.rebirthCount++;
+            gameState.rebirthMultiplier *= 1.1;
+            
+            // Reset clicks and coin progress
+            gameState.clicks = 0;
+            gameState.coinProgress = 0;
+            
+            // Increase rebirth cost for next time
+            gameState.rebirthCost = Math.floor(gameState.rebirthCost * 1.5);
+            
+            // Update displays
+            updateDisplays();
+            updateButtonStates();
+            
+            // Show notification
+            showNotification(`Rebirth #${gameState.rebirthCount} complete! Multiplier: ${gameState.rebirthMultiplier.toFixed(2)}x`, "success");
+            
+            // Save game
+            saveGame();
+        }
+
+        // Perform Multi-Rebirth
+        function performMultiRebirth(count) {
+            let gemCost = 0;
+            
+            // Calculate gem cost based on count
+            if (count === 10) gemCost = 10;
+            else if (count === 100) gemCost = 100;
+            else if (count === 500) gemCost = 500;
+            
+            // Check if player has enough gems
+            if (gameState.gems < gemCost) {
+                showNotification(`Not enough gems! Need ${gemCost} gems.`, "error");
+                return;
+            }
+            
+            // Check if player has enough coins for all rebirths
+            let totalCoinCost = 0;
+            let tempCost = gameState.rebirthCost;
+            
+            for (let i = 0; i < count; i++) {
+                totalCoinCost += tempCost;
+                tempCost = Math.floor(tempCost * 1.5);
+            }
+            
+            if (gameState.coins < totalCoinCost) {
+                showNotification(`Not enough coins! Need ${totalCoinCost} coins for ${count} rebirths.`, "error");
+                return;
+            }
+            
+            // Deduct gems and coins
+            gameState.gems -= gemCost;
+            gameState.coins -= totalCoinCost;
+            
+            // Perform multiple rebirths
+            for (let i = 0; i < count; i++) {
+                gameState.rebirthCount++;
+                gameState.rebirthMultiplier *= 1.1;
+                gameState.rebirthCost = Math.floor(gameState.rebirthCost * 1.5);
+            }
+            
+            // Reset clicks and coin progress
+            gameState.clicks = 0;
+            gameState.coinProgress = 0;
+            
+            // Update displays
+            updateDisplays();
+            updateButtonStates();
+            
+            // Show notification
+            showNotification(`${count} rebirths completed! Multiplier: ${gameState.rebirthMultiplier.toFixed(2)}x`, "success");
+            
+            // Save game
+            saveGame();
+        }
+
+        // Buy Egg
+        function buyEgg(eggId) {
+            const egg = eggs.find(e => e.id === eggId);
+            if (!egg) return;
+            
+            if (gameState.coins < egg.cost) {
+                showNotification(`Not enough coins! Need ${egg.cost} coins.`, "error");
+                return;
+            }
+            
+            // Deduct coins
+            gameState.coins -= egg.cost;
+            
+            // Create pet
+            const pet = {
+                "id": gameState.pets.length + 1,
+                "name": `${egg.name.replace(" Egg", "")} Pet`,
+                "multiplier": egg.multiplier,
+                "color": egg.color,
+                "icon": "fas fa-paw"
+            };
+            
+            // Add pet to collection
+            gameState.pets.push(pet);
+            
+            // Update pet multiplier
+            updatePetMultiplier();
+            
+            // Update displays
+            updateDisplays();
+            updateButtonStates();
+            renderPets();
+            
+            // Show notification with animation
+            showNotification(`You hatched a ${pet.name}! Multiplier: ${pet.multiplier}x`, "success");
+            
+            // Add egg hatch animation
+            const eggElement = document.querySelector(`[data-egg-id="${eggId}"]`);
+            if (eggElement) {
+                eggElement.classList.add("egg-hatch");
+                setTimeout(() => {
+                    eggElement.classList.remove("egg-hatch");
+                }, 500);
+            }
+            
+            // Save game
+            saveGame();
+        }
+
+        // Update Pet Multiplier
+        function updatePetMultiplier() {
+            if (gameState.pets.length === 0) {
+                gameState.petMultiplier = 1.0;
+                return;
+            }
+            
+            // Calculate total pet multiplier (multiplicative)
+            let totalMultiplier = 1.0;
+            gameState.pets.forEach(pet => {
+                totalMultiplier *= pet.multiplier;
+            });
+            
+            gameState.petMultiplier = totalMultiplier;
+        }
+
+        // Update All Displays
+        function updateDisplays() {
+            // Update numeric displays
+            clicksDisplay.textContent = formatNumber(gameState.clicks);
+            coinsDisplay.textContent = formatNumber(gameState.coins);
+            gemsDisplay.textContent = formatNumber(gameState.gems);
+            rebirthCountDisplay.textContent = gameState.rebirthCount;
+            
+            // Update multiplier displays
+            const totalMultiplier = gameState.rebirthMultiplier * gameState.petMultiplier;
+            multiplierDisplay.textContent = `${totalMultiplier.toFixed(2)}x`;
+            petMultiplierDisplay.textContent = `${gameState.petMultiplier.toFixed(2)}x`;
+            clicksPerTapDisplay.textContent = (gameState.clicksPerTap * totalMultiplier).toFixed(2);
+            
+            // Update rebirth info
+            rebirthCostDisplay.textContent = gameState.rebirthCost;
+            totalRebirthsDisplay.textContent = gameState.rebirthCount;
+            currentMultiplierDisplay.textContent = `${gameState.rebirthMultiplier.toFixed(2)}x`;
+            nextMultiplierDisplay.textContent = `${(gameState.rebirthMultiplier * 1.1).toFixed(2)}x`;
+            
+            // Update coin progress
+            const progressPercent = (gameState.coinProgress / 10) * 100;
+            coinProgressBar.style.width = `${progressPercent}%`;
+            coinProgressText.textContent = `${Math.floor(gameState.coinProgress)}/10`;
+        }
+
+        // Update Button States
+        function updateButtonStates() {
+            // Rebirth button
+            rebirthButton.disabled = gameState.coins < gameState.rebirthCost;
+            
+            // Multi-rebirth buttons
+            rebirth10Button.disabled = gameState.gems < 10;
+            rebirth100Button.disabled = gameState.gems < 100;
+            rebirth500Button.disabled = gameState.gems < 500;
+            
+            // Update button styles based on state
+            const updateButtonStyle = (button, enabled) => {
+                if (enabled) {
+                    button.classList.remove("opacity-50", "cursor-not-allowed");
+                } else {
+                    button.classList.add("opacity-50", "cursor-not-allowed");
+                }
+            };
+            
+            updateButtonStyle(rebirthButton, !rebirthButton.disabled);
+            updateButtonStyle(rebirth10Button, !rebirth10Button.disabled);
+            updateButtonStyle(rebirth100Button, !rebirth100Button.disabled);
+            updateButtonStyle(rebirth500Button, !rebirth500Button.disabled);
+        }
+
+        // Render Egg Shop
+        function renderEggShop() {
+            eggShopContainer.innerHTML = "";
+            
+            eggs.forEach(egg => {
+                const eggElement = document.createElement("div");
+                eggElement.className = "bg-gray-800/50 rounded-xl p-4 border border-gray-700 pet-card";
+                eggElement.setAttribute("data-egg-id", egg.id);
+                
+                eggElement.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center">
+                            <i class="${egg.icon} text-${egg.color}-400 text-xl mr-3"></i>
+                            <div>
+                                <div class="font-bold text-${egg.color}-300">${egg.name}</div>
+                                <div class="text-sm text-gray-400">${egg.description}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-yellow-400">${egg.cost} coins</div>
+                            <button 
+                                onclick="buyEgg(${egg.id})"
+                                class="mt-2 bg-gradient-to-r from-${egg.color}-700 to-${egg.color}-600 hover:from-${egg.color}-600 hover:to-${egg.color}-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 text-sm"
+                            >
+                                Buy Egg
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                eggShopContainer.appendChild(eggElement);
+            });
+        }
+
+        // Render Pets
+        function renderPets() {
+            petsContainer.innerHTML = "";
+            
+            if (gameState.pets.length === 0) {
+                petsContainer.innerHTML = '<div class="text-gray-500 text-sm">No pets yet. Buy eggs to hatch pets!</div>';
+                return;
+            }
+            
+            gameState.pets.forEach(pet => {
+                const petElement = document.createElement("div");
+                petElement.className = "bg-gray-800/50 rounded-lg p-3 border border-gray-700";
+                
+                petElement.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="${pet.icon} text-${pet.color}-400 text-lg mr-2"></i>
+                        <div>
+                            <div class="font-bold text-${pet.color}-300">${pet.name}</div>
+                            <div class="text-sm text-gray-400">${pet.multiplier}x multiplier</div>
+                        </div>
+                    </div>
+                `;
+                
+                petsContainer.appendChild(petElement);
+            });
+        }
+
+        // Render Milestones
+        function renderMilestones() {
+            milestonesContainer.innerHTML = "";
+            
+            milestones.forEach(milestone => {
+                let progress = 0;
+                let completed = false;
+                
+                // Check if milestone is already in game state
+                const savedMilestone = gameState.milestones.find(m => m.id === milestone.id);
+                if (savedMilestone) {
+                    completed = savedMilestone.completed;
+                } else {
+                    // Check progress based on type
+                    if (milestone.type === "clicks") {
+                        progress = gameState.totalClicks;
+                        completed = gameState.totalClicks >= milestone.threshold;
+                    } else if (milestone.type === "coins") {
+                        progress = gameState.totalCoins;
+                        completed = gameState.totalCoins >= milestone.threshold;
+                    } else if (milestone.type === "rebirths") {
+                        progress = gameState.rebirthCount;
+                        completed = gameState.rebirthCount >= milestone.threshold;
+                    }
+                }
+                
+                const milestoneElement = document.createElement("div");
+                milestoneElement.className = `bg-gray-800/50 rounded-lg p-3 border ${completed ? "border-green-700" : "border-gray-700"}`;
+                
+                milestoneElement.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="font-bold ${completed ? "text-green-300" : "text-gray-300"}">${milestone.name}</div>
+                            <div class="text-sm text-gray-400">${completed ? "Completed!" : `Progress: ${formatNumber(progress)}/${formatNumber(milestone.threshold)}`}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-yellow-400">${milestone.reward} <i class="fas fa-gem text-purple-400"></i></div>
+                            ${completed ? '<i class="fas fa-check text-green-400"></i>' : '<i class="fas fa-lock text-gray-500"></i>'}
+                        </div>
+                    </div>
+                `;
+                
+                milestonesContainer.appendChild(milestoneElement);
+            });
+        }
+
+        // Check Milestones
+        function checkMilestones() {
+            let newMilestones = false;
+            
+            milestones.forEach(milestone => {
+                // Skip if already completed
+                if (gameState.milestones.find(m => m.id === milestone.id && m.completed)) {
+                    return;
+                }
+                
+                let completed = false;
+                
+                // Check based on type
+                if (milestone.type === "clicks") {
+                    completed = gameState.totalClicks >= milestone.threshold;
+                } else if (milestone.type === "coins") {
+                    completed = gameState.totalCoins >= milestone.threshold;
+                } else if (milestone.type === "rebirths") {
+                    completed = gameState.rebirthCount >= milestone.threshold;
+                }
+                
+                if (completed) {
+                    // Add to completed milestones
+                    gameState.milestones.push({
+                        ...milestone,
+                        completed: true
+                    });
+                    
+                    // Award gems
+                    gameState.gems += milestone.reward;
+                    
+                    // Show notification
+                    showNotification(`Milestone reached: ${milestone.name}! Awarded ${milestone.reward} gems!`, "milestone");
+                    
+                    newMilestones = true;
+                }
+            });
+            
+            if (newMilestones) {
+                updateDisplays();
+                renderMilestones();
+                updateButtonStates();
+                saveGame();
+            }
+        }
+
+        // Show Notification
+        function showNotification(message, type = "info") {
+            const notification = document.createElement("div");
+            notification.className = `notification bg-gray-800 border-l-4 ${type === "success" ? "border-green-500" : type === "error" ? "border-red-500" : type === "milestone" ? "border-purple-500" : "border-blue-500"} p-3 rounded-r-lg shadow-lg max-w-xs`;
+            
+            notification.innerHTML = `
+                <div class="flex items-start">
+                    <i class="fas ${type === "success" ? "fa-check-circle text-green-400" : type === "error" ? "fa-exclamation-circle text-red-400" : type === "milestone" ? "fa-gem text-purple-400" : "fa-info-circle text-blue-400"} mr-2 mt-0.5"></i>
+                    <div class="text-sm">${message}</div>
+                </div>
+            `;
+            
+            notificationsContainer.appendChild(notification);
+            
+            // Remove notification after 5 seconds
+            setTimeout(() => {
+                notification.style.opacity = "0";
+                notification.style.transition = "opacity 0.5s";
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 500);
+            }, 5000);
+        }
+
+        // Show Coin Animation
+        function showCoinAnimation(coins) {
+            const coin = document.createElement("div");
+            coin.className = "coin-animation absolute text-yellow-400 font-bold game-font";
+            coin.textContent = `+${coins} coin${coins > 1 ? "s" : ""}`;
+            coin.style.left = "50%";
+            coin.style.top = "50%";
+            coin.style.transform = "translate(-50%, -50%)";
+            
+            clickButton.appendChild(coin);
+            
+            setTimeout(() => {
+                if (coin.parentNode) {
+                    coin.parentNode.removeChild(coin);
+                }
+            }, 1000);
+        }
+
+        // Format Numbers
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(2) + "M";
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(2) + "K";
+            }
+            return Math.floor(num).toString();
+        }
+
+        // Save Game
+        function saveGame() {
+            gameState.lastSave = Date.now();
+            localStorage.setItem("clickSimulationSave", JSON.stringify(gameState));
+        }
+
+        // Load Game
+        function loadGame() {
+            const saved = localStorage.getItem("clickSimulationSave");
+            if (saved) {
+                const savedState = JSON.parse(saved);
+                
+                // Merge saved state with current state
+                Object.keys(savedState).forEach(key => {
+                    if (gameState.hasOwnProperty(key)) {
+                        gameState[key] = savedState[key];
+                    }
+                });
+                
+                // Update pet multiplier
+                updatePetMultiplier();
+                
+                showNotification("Game loaded successfully!", "success");
+            }
+        }
+
+        // Initialize the game when page loads
+        document.addEventListener("DOMContentLoaded", initGame);
+        
+        // Make functions available globally for button clicks
+        window.buyEgg = buyEgg;
+    </script>
+</body>
+</html>
